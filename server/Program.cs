@@ -1,3 +1,8 @@
+using System.Text.Json;
+using Npgsql;
+using server;
+using server.Classes;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDistributedMemoryCache();
@@ -8,46 +13,72 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+Database database = new Database();
+NpgsqlDataSource db = database.Connection();
+builder.Services.AddSingleton(db);
 
 var app = builder.Build();
 
 app.UseSession();
 
-
-
 app.MapGet("/", () => "Hello World!");
+app.MapGet("/api/login", (Func<HttpContext, Task<IResult>>)GetLogin);
+app.MapPost("/api/login", (Func<HttpContext,LoginRequest,NpgsqlDataSource, Task<IResult>>)Login);
+app.MapDelete("/api/login", (Func<HttpContext, Task<IResult>>)Logout);
 
-app.MapPost("/api/set-session", (Delegate)SetSession);
-app.MapGet("/api/get-session", (Delegate)GetSession);
-app.MapDelete("/api/clear-session", (Delegate)ClearSession);
-
-async Task<IResult> SetSession(HttpContext context)
-{
-    if (context.Session.GetString("email") != null)
-    {
-        return Results.BadRequest("Session already set");
-    }
-    Console.WriteLine("SetSession is called..Setting session");
-    await Task.Run(() => context.Session.SetString("email", "superadmin@admin.com"));
-    return Results.Ok(context.Session.GetString("email"));
-}
-
-async Task<IResult> GetSession(HttpContext context)
+static async Task<IResult> GetLogin(HttpContext context)
 {
     Console.WriteLine("GetSession is called..Getting session");
-    var email = await Task.Run(() => context.Session.GetString("email"));
-    if (email == null)
+    var key = await Task.Run(() => context.Session.GetString("User"));
+    if (key == null)
     {
-        return Results.NotFound("Session not found");
+        return Results.NotFound(new { message = "No one is logged in." });
     }
-    return Results.Ok(email);
+    var user = JsonSerializer.Deserialize<User>(key);
+    return Results.Ok(new {username = user?.Username});
 }
 
-async Task<IResult> ClearSession(HttpContext context)
+static async Task<IResult> Login(HttpContext context, LoginRequest request, NpgsqlDataSource db)
 {
+    if (context.Session.GetString("User") != null)
+    {
+        return Results.BadRequest(new { message = "Someone is already logged in." });
+    }
+    Console.WriteLine("SetSession is called..Setting session");
+    
+    await using var cmd = db.CreateCommand("SELECT * FROM users WHERE username = @username and password = @password");
+    cmd.Parameters.AddWithValue("@username", request.Username);
+    cmd.Parameters.AddWithValue("@password", request.Password);
+    
+    await using (var reader = await cmd.ExecuteReaderAsync())
+    {
+        if (reader.HasRows)
+        { 
+            while (await reader.ReadAsync())
+            {
+                User user = new User( 
+                    reader.GetInt32(reader.GetOrdinal("id")),
+                    reader.GetString(reader.GetOrdinal("username")), 
+                    Enum.Parse<Role>(reader.GetString(reader.GetOrdinal("role")))
+                    );
+                await Task.Run(() => context.Session.SetString("User", JsonSerializer.Serialize(user)));
+                return Results.Ok(new { username = user.Username });
+            }
+        }
+    }
+    
+    return Results.NotFound(new { message = "No user found." });
+}
+
+static async Task<IResult> Logout(HttpContext context)
+{
+    if (context.Session.GetString("User") == null)
+    {
+        return Results.Conflict(new { message = "No login found." });
+    }
     Console.WriteLine("ClearSession is called..Clearing session");
     await Task.Run(context.Session.Clear);
-    return Results.Ok("Session cleared");
+    return Results.Ok(new { message = "Logged out." });
 }
 
 await app.RunAsync();
