@@ -6,6 +6,5 @@ export default function Home() {
 
     return <div>
         <h1>{user ? `Welcome ${user.username}!` : "You need to login."}</h1>
-        <button onClick={() => console.log(user)}>Get Login</button>
     </div>
 }
