@@ -1,8 +1,10 @@
 import { useContext } from "react"
 import { GlobalContext } from "../GlobalContext.jsx"
+import { useNavigate } from "react-router"
 
 export default function Login() {
     const { getLogin } = useContext(GlobalContext)
+    const navigate = useNavigate();
 
     async function login(formData) {
         const response = await fetch('/api/login', {
@@ -15,8 +17,12 @@ export default function Login() {
             })
         })
         const data = await response.json()
-        console.log(data)
-        await getLogin()
+        if (response.ok) {
+            await getLogin()
+            navigate("/")
+        } else {
+            alert(data.message)
+        }
     }
 
     return <div>
