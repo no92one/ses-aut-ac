@@ -35,7 +35,8 @@ static async Task<IResult> GetLogin(HttpContext context)
         return Results.NotFound(new { message = "No one is logged in." });
     }
     var user = JsonSerializer.Deserialize<User>(key);
-    return Results.Ok(new {username = user?.Username});
+    Console.WriteLine("user: " + user);
+    return Results.Ok(user);
 }
 
 static async Task<IResult> Login(HttpContext context, LoginRequest request, NpgsqlDataSource db)
