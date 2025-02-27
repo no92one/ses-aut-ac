@@ -3,6 +3,7 @@ import Layout from "./Layout.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Admin from "./pages/Admin.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 export default function App() {
 
@@ -11,7 +12,11 @@ export default function App() {
       <Route path="/" element={<Layout />} >
         <Route index element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin" element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Admin />
+          </ProtectedRoute>
+        } />
       </Route>
     </Routes>
   </BrowserRouter>
