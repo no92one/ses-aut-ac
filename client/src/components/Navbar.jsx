@@ -14,6 +14,7 @@ export default function Navbar() {
 
     return <>
         <NavLink to="/">Home</NavLink>
+        <NavLink to="/chat">Chat</NavLink>
         {
             user?.role == "ADMIN" ?
                 <NavLink to="/admin">Admin</NavLink>
