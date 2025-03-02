@@ -33,6 +33,7 @@ export default function Chat() {
                     const chunk = new TextDecoder().decode(value);
                     const lines = chunk.split('\n').filter(line => line.trim());
 
+                    // Parse each line as JSON
                     for (const line of lines) {
                         const json = JSON.parse(line);
                         fullMessage += json.response;
@@ -40,7 +41,6 @@ export default function Chat() {
                     }
                 }
             } else {
-                // Handle non-streaming response
                 const data = await response.json();
                 setMessage(data.response);
             }
@@ -63,7 +63,7 @@ export default function Chat() {
             <input type="text" value={prompt} onChange={handlePrompt} />
             <p>Click the button to generate message</p>
             <button
-                onClick={() => messages(prompt, true)}
+                onClick={() => messages(prompt, false)}
                 disabled={isLoading}
             >
                 {isLoading ? "Generating..." : "Generate"}
