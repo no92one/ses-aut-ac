@@ -3,6 +3,9 @@ using Npgsql;
 using server;
 using server.Classes;
 using server.Extensions;
+using server.Services;
+using server.Config;
+using server.records;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,17 @@ Database database = new Database();
 NpgsqlDataSource db = database.Connection();
 builder.Services.AddSingleton(db);
 
+var emailSettings = builder.Configuration.GetSection("Email").Get<EmailSettings>();
+if (emailSettings != null)
+{
+    builder.Services.AddSingleton(emailSettings);
+}
+else
+{
+    throw new InvalidOperationException("Email settings are not configured properly.");
+}
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 var app = builder.Build();
 
 app.UseSession();
@@ -29,6 +43,16 @@ app.MapDelete("/api/login", (Func<HttpContext, Task<IResult>>)Logout);
 
 app.MapGet("/api/admin/data", () => "This is very secret admin data here..").RequireRole(Role.ADMIN);
 app.MapGet("/api/user/data", () => "This is data that users can look at. Its not very secret").RequireRole(Role.USER);
+
+app.MapPost("/api/email", SendEmail);
+
+static async Task<IResult> SendEmail(EmailRequest request, IEmailService email)
+{
+    Console.WriteLine("SendEmail is called..Sending email");
+    await email.SendEmailAsync(request.To, request.Subject, request.Body);
+    Console.WriteLine("Email sent to: " + request.To + " with subject: " + request.Subject + " and body: " + request.Body);
+    return Results.Ok(new { message = "Email sent." });
+}
 
 static async Task<IResult> GetLogin(HttpContext context)
 {

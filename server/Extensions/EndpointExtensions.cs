@@ -18,7 +18,7 @@ public static class EndpointExtensions
             }
 
             var user = JsonSerializer.Deserialize<User>(userJson);
-            if (user.Role != role)
+            if (user?.Role != role)
             {
                 return Results.StatusCode(403);
             }
