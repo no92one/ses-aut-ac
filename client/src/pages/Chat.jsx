@@ -21,7 +21,6 @@ export default function Chat() {
             });
 
             if (streamEnabled) {
-                // Handle streaming response
                 const reader = response.body.getReader();
                 let fullMessage = "";
 
@@ -29,11 +28,9 @@ export default function Chat() {
                     const { value, done } = await reader.read();
                     if (done) break;
 
-                    // Convert the chunk to text
                     const chunk = new TextDecoder().decode(value);
                     const lines = chunk.split('\n').filter(line => line.trim());
 
-                    // Parse each line as JSON
                     for (const line of lines) {
                         const json = JSON.parse(line);
                         fullMessage += json.response;
